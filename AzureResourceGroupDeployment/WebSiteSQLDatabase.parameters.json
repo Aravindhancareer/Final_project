@@ -3,22 +3,22 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "hostingPlanName": {
-      "value": "houssemdellai-service-plan"
+      "value": "Webapp-service-plan"
     },
     "administratorLogin": {
-      "value": "houssem"
+      "value": "Aravindhan"
     },
     "administratorLoginPassword": {
       "value": "@Aa123456"
     },
     "databaseName": {
-      "value": "EmployeesDB"
+      "value": "finaltestDB"
     },
     "webSiteName": {
-      "value": "houssemdellai-webapp"
+      "value": "Aravindhan-webapp"
     },
     "sqlserverName": {
-      "value": "houssemdellai-sql"
+      "value": "Aravindhan-sql"
     }
   }
 }
