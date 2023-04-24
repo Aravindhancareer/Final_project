@@ -1,0 +1,111 @@
+# ASP.NET Core (.NET Framework)
+# Build and test ASP.NET Core projects targeting the full .NET Framework.
+# Add steps that publish symbols, save build artifacts, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+  branches:
+    include:
+    - master
+pr:
+  branches:
+    include:
+    - master
+    - test
+
+jobs:
+- job: WebApp
+  displayName: 'Build Web App'
+  pool:
+    vmImage: 'windows-latest'
+  variables:
+    solution: '**/*.sln'
+    buildPlatform: 'Any CPU'
+    buildConfiguration: 'Release'
+
+  steps:
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'restore'
+      projects: |
+        **/*.csproj
+        !**/*SeleniumUiTests.csproj
+      feedsToUse: 'select'
+
+  - task: SonarCloudPrepare@1
+    inputs:
+      SonarCloud: 'Sonar_WebappWithDatabase'
+      organization: 'aravindhancareer'
+      scannerMode: 'MSBuild'
+      projectKey: 'WebappWithDatabase'
+      projectName: 'WebappWithDatabase'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'build'
+      projects: |
+        **/*.csproj
+        !**/*SeleniumUiTests.csproj
+      arguments: '--configuration $(BuildConfiguration)'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'test'
+      projects: '**/*[Tt]est/*.csproj'
+      arguments: '--configuration $(BuildConfiguration)'
+
+  - task: SonarCloudAnalyze@1
+
+  - task: SonarCloudPublish@1
+    inputs:
+      pollingTimeoutSec: '300'
+    
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'publish'
+      publishWebProjects: true
+      arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
+    
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: 'drop'
+      publishLocation: 'Container'
+
+- job: Database
+  displayName: 'Build Database'
+  pool:
+    vmImage: 'windows-2019'
+
+  steps:
+
+  - task: MSBuild@1
+    displayName: 'Build solution WebApp.Database.sqlproj'
+    inputs:
+      solution: WebApp.Database/WebApp.Database.sqlproj
+      msbuildArguments: '/p:OutDir=$(Build.ArtifactStagingDirectory)'
+  
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact (Dacpac)'
+    inputs:
+      ArtifactName: dacpac
+
+
+- job: Infrastructure
+  displayName: 'Copy Infrastructure files (ARM)'
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+
+  - task: CopyFiles@2
+    inputs:
+      SourceFolder: 'AzureResourceGroupDeployment'
+      Contents: 'azuredeploy*.json'
+      TargetFolder: '$(build.artifactstagingdirectory)'
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: 'drop'
+      publishLocation: 'Container'
